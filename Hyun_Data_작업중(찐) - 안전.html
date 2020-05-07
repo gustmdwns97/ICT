@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" type="text/css" href="resources/kehazus/css/reset.css">
+	<link rel="stylesheet" type="text/css" href="resources/kehazus/css/common.css">
+
+	<link rel="stylesheet" href="resources/kehazus/css/menutree/jquery.treeview.css">
+	<link rel="stylesheet" href="resources/kehazus/css/menutree/red-treeview.css">
+	<script type="text/javascript" src="resources/kehazus/js/menutree/jquery-1.9.1.min.js"></script>
+	<script src="resources/kehazus/js/menutree/jquery.cookie.js" type="text/javascript"></script>
+	<script src="resources/kehazus/js/menutree/jquery.treeview.js" type="text/javascript"></script>
+
+
+	<title>Disaster Management IETM</title>
+	<!--script src="resources/kehazus/js/jquery-3.3.1.min.js"></script-->
+	<script>
+		$(document).ready(function() {
+			var cnt = 1; // 1번째 자식을 호출하기 위한 카운트    	
+			var childcnt = 1;
+			var type_A_ddlb = "";
+			var type_B_ddlb = "";
+			var type_D_ddlb = "";
+			$.ajax({
+				url: "resources/kehazus/xml/kehazus.xml",
+				type: "GET",
+				dataType: "xml",
+				async: false,
+				success: function(xml) { // 성공시 가져옵니다.
+					$(xml).children("items").children("item").each(function() {
+						var id = $(this).children("id").text();
+						var name = $(this).children("name").text();
+						var depth = $(this).children("depth").text();
+						var url = $(this).children("url").text();
+						var tabno = $(this).children("tabno").text();
+
+						var text = "<li><img src='resources/kehazus/img/menutree/folder.gif'/><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span><ul id = 'codeDepth1_" + cnt + "'></ul></li>";
+						$("#codeDepth1").append(text); // 1depth 에 해당하는 메뉴에 child depth 를 추가하기위해 1_1, 1_2 형태로 id 값이 추가됩니다.
+
+						// 2depth 에 해당하는 메뉴에 child depth 를 추가하기위한 카운트 변수입니다.
+						// 해당 변수를 통해 ul 의 id 값이 2_1, 2_2 또는 3_1 , 3_2  등으로 선언이 되는데요 각각 하위depth 가 추가되기위해
+						// 레벨별 number 라고 생각하시면 좋을것 같습니다.(계층형댓글형태)
+						// var childcnt = 1;                        
+						$.ajax({
+							url: "resources/kehazus/xml/kehazus1_" + id + ".xml",
+							type: "GET",
+							dataType: "xml",
+							async: false,
+							success: function(xml) {
+								$(xml).children("items").children("item").each(function() {
+									var id = $(this).children("id").text();
+									var name = $(this).children("name").text();
+									var depth = $(this).children("depth").text();
+									var url = $(this).children("url").text();
+									var tabno = $(this).children("tabno").text();
+
+									if (id.substr(0, 1) == "A") {
+										type_A_ddlb = "<option value='" + id + "'>" + name + "</option>";
+										$('#type01').append(type_A_ddlb)
+									} else if (id.substr(0, 1) == "B") {
+										type_B_ddlb = "<option value='" + id + "'>" + name + "</option>";
+										$('#type02').append(type_B_ddlb)
+									} else if (id.substr(0, 1) == "D") {
+										type_D_ddlb = "<option value='" + id + "'>" + name + "</option>";
+										$('#type03').append(type_D_ddlb)
+									}
+
+									// 해당부분에서 ul 의 값이 추가됩니다.
+									var text = "<li><img src='resources/kehazus/img/menutree/folder.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span><ul id = 'codeDepth2_" + childcnt + "'></ul></li>";
+									$("#codeDepth1_" + cnt).append(text);
+									$.ajax({
+										url: "resources/kehazus/xml/kehazus" + depth + "_" + id + "_" + childcnt + ".xml",
+										type: "GET",
+										dataType: "xml",
+										async: false,
+										success: function(xml) {
+											$(xml).children("items").children("item").each(function() {
+												var id = $(this).children("id").text();
+												var name = $(this).children("name").text();
+												var depth = $(this).children("depth").text();
+												var url = $(this).children("url").text();
+												var tabno = $(this).children("tabno").text();
+
+												var text = "<li><img src='resources/kehazus/img/menutree/file.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span></li>";
+												$("#codeDepth2_" + childcnt).append(text);
+											});
+										},
+										error: function() {}
+									});
+									childcnt++;
+								});
+							},
+							error: function() {
+								var errortext2 = "<li><img src='resources/kehazus/img/menutree/file.gif' />nocode</li>";
+								$("#codeDepth1_" + cnt).append(errortext2);
+							}
+						});
+						cnt++;
+					});
+
+				},
+				error: function() {
+					var errortext1 = "<li><img src='resources/kehazus/img/menutree/file.gif' />nocode</li>";
+					$("#codeDepth1").append(errortext1);
+				}
+			});
+
+			// 해당코드는 ajax 를 통해 tree 구조가 완성된 후 jquery.treeview() 메소드를 이용하여 css 를 제어합니다.
+			// 현재 folder.gif 로 구현되는 li 태그에 ul 태그가 있다면 "+","-" 를 추가하여 클릭시 하위 depth 메뉴를 볼수있도록 도와줍니다.
+			// 반대로 file.gif 로 구현되는 li 태그로 구현되된다면 "+","-" 를 그려주지않는기능을 수행합니다.
+			// 반드시 메뉴구조가 완성된 후 호출하여야 하는 함수입니다.(완성전에 호출한다면 정상적으로 보이지 않을수 있습니다.)
+
+			$("#codeDepth1").treeview({
+				animated: "fast",
+				collapsed: true,
+				unique: true,
+				persist: "cookie",
+				toggle: function() {
+					window.console && console.log("%o was toggled", this);
+				}
+			});
+
+			/* tab01 */
+			$('.tab01 > .tab_title > li').eq(0).addClass("on");
+			$('.tab01 > .tab_content > .content_list').eq(0).addClass("on");
+
+			$('.tab01 > .tab_title > li').click(function() {
+				$('.tab01 > .tab_title > li').removeClass("on");
+				$('.tab01 > .tab_content > .content_list').removeClass("on");
+
+				var tab_idx = $(this).index();
+				$('.tab01 > .tab_title > li').eq(tab_idx).addClass("on");
+				$('.tab01 > .tab_content > .content_list').eq(tab_idx).addClass("on");
+			});
+
+			/* tab02 */
+			$('.tab02 > .tab_title > li').eq(0).addClass("on");
+			$('.tab02 >.tab_content > .content_list').eq(0).addClass("on");
+
+			$('.tab02 >.tab_title > li').click(function() {
+				$('.tab02 >.tab_title > li').removeClass("on");
+				$('.tab02 >.tab_content > .content_list').removeClass("on");
+
+				var tab_idx = $(this).index();
+				$('.tab02 >.tab_title > li').eq(tab_idx).addClass("on");
+				$('.tab02 >.tab_content > .content_list').eq(tab_idx).addClass("on");
+			});
+		});
+
+		function show_content(tabno, destination) {
+			$("#tab0" + tabno + "_only").html("<object data='" + destination + "'/>");
+			$("#tab0" + tabno + "_all").html("<object data='" + destination + "'/>");
+		}
+
+		function show_list(type_no) {
+			if (type_no == 1) {
+				search_treeview($('#type01').val(), $('#search_keyword').val(), "div_search_result");
+			} else if (type_no == 2) {
+				search_treeview($('#type02').val(), $('#search_keyword').val(), "div_search_result");
+			} else if (type_no == 3) {
+				search_treeview($('#type03').val(), $('#search_keyword').val(), "div_search_result");
+			} else {
+				search_treeview("", $('#search_keyword').val(), "div_search_result");
+			}
+		}
+
+		function search_treeview(id_range, keyword, divid) {
+			var cnt = 1; // 1번째 자식을 호출하기 위한 카운트    	
+			var childcnt = 1;
+
+			document.getElementById(divid).innerHTML = "";
+			var search_keyword = keyword.toUpperCase();
+			var search_id = id_range.substr(0, 2);
+			var result_text = "<ul>";
+
+			$.ajax({
+				url: "resources/kehazus/xml/kehazus.xml",
+				type: "GET",
+				dataType: "xml",
+				async: false,
+				success: function(xml) { // 성공시 가져옵니다.
+					$(xml).children("items").children("item").each(function() {
+						var id = $(this).children("id").text();
+						var name = $(this).children("name").text();
+						var depth = $(this).children("depth").text();
+						var url = $(this).children("url").text();
+						var tabno = $(this).children("tabno").text();
+
+						$.ajax({
+							url: "resources/kehazus/xml/kehazus1_" + id + ".xml",
+							type: "GET",
+							dataType: "xml",
+							async: false,
+							success: function(xml) {
+								$(xml).children("items").children("item").each(function() {
+									var id = $(this).children("id").text();
+									var name = $(this).children("name").text();
+									var depth = $(this).children("depth").text();
+									var url = $(this).children("url").text();
+									var tabno = $(this).children("tabno").text();
+
+									if (search_id != "") {
+										id = id.toUpperCase();
+										if (id.substr(0, search_id.length) == search_id) {
+											var text = "<li><img src='resources/kehazus/img/menutree/folder.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span></li>";
+											result_text = result_text + text;
+										}
+									} else {
+										name = name.toUpperCase();
+										if (name.match(search_keyword)) {
+											var text = "<li><img src='resources/kehazus/img/menutree/folder.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span></li>";
+											result_text = result_text + text;
+										}
+									}
+
+									$.ajax({
+										url: "resources/kehazus/xml/kehazus" + depth + "_" + id + "_" + childcnt + ".xml",
+										type: "GET",
+										dataType: "xml",
+										async: false,
+										success: function(xml) {
+											$(xml).children("items").children("item").each(function() {
+												var id = $(this).children("id").text();
+												var name = $(this).children("name").text();
+												var depth = $(this).children("depth").text();
+												var url = $(this).children("url").text();
+												var tabno = $(this).children("tabno").text();
+
+												if (search_id != "") {
+													id = id.toUpperCase();
+													if (id.substr(0, search_id.length) == search_id) {
+														var text = "<li>&nbsp;&nbsp;<img src='resources/kehazus/img/menutree/file.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span></li>";
+														result_text = result_text + text;
+													}
+												} else {
+													name = name.toUpperCase();
+													if (name.match(search_keyword)) {
+														var text = "<li>&nbsp;&nbsp;<img src='resources/kehazus/img/menutree/file.gif' /><span onclick='show_content(" + tabno + ", \"" + url + "\")'>" + name + "(" + id + ")</span></li>";
+														result_text = result_text + text;
+													}
+												}
+											});
+										},
+										error: function() {}
+									});
+									childcnt++;
+								});
+							},
+							error: function() {
+								var errortext2 = "<li><img src='resources/kehazus/img/menutree/file.gif' />nocode</li>";
+								result_text = result_text + errortext2;
+							}
+						});
+						cnt++;
+					});
+
+				},
+				error: function() {
+					var errortext1 = "<li><img src='resources/kehazus/img/menutree/file.gif' />nocode</li>";
+					result_text = result_text + errortext1;
+				}
+			});
+
+			document.getElementById(divid).innerHTML = result_text + "</ul>";
+		}
+
+		<!--팝업_s-->       
+		(function(w, $) {
+
+			/**
+			 * ----------------------------------
+			 * @ Plug-in Dialog
+			 * Created by jaehee on 2016. 03
+			 * ----------------------------------
+			 */
+
+			// 다이얼로그 팝업 플로그인 이름 정의
+			var pluginName = 'dialog';
+
+			// Init Dialog 객체 생성자
+			function Dialog($selector, options) {
+
+				// 타켓을 참조
+				this.$selector = $selector;
+
+				// 플러그인 옵션값을 config 멤버에 플러그인 내부적으로 셋팅된 기본 옵션값과 사용자 정의의 옵션값을 확장,머지 하도록 한다.
+				this.config = $.extend({}, this.defaults, options || {});
+
+				this._init();
+				this._setEvent();
+			}
+
+			Dialog.prototype = {
+				// 플러그인 기본 옵션값 셋팅
+				'defaults': {
+					modalClose: '.btnp-close',
+					fade: false,
+					fadeSpeed: 400,
+					dimmed: true,
+					dimOpacity: .8,
+					bodyScroll: false,
+					escKey: false,
+					clickDimmed: true
+				},
+				'_init': function() {
+
+					this.$targetData = this.$selector.data('popup');
+					this.$modalContent = $(this.$targetData);
+					// 레이어 팝업내의 닫기 버튼 선택
+					this.$modalClose = this.$modalContent.find(this.config.modalClose);
+
+					// document, window 객체와 body 를 제이쿼리 객체로 참조
+					this.detect = {
+						$doc: $(document),
+						$win: $(window),
+						$body: $('body')
+					};
+
+				},
+				'_setEvent': function() {
+
+					// 인스턴스 객체 참조
+					var _self = this;
+
+					// modal [show|fade] event 등록
+					this.detect.$doc.on('click', '[data-popup="' + this.$targetData + '"]', function(e) {
+
+						// _self : 이벤트 내의 this 는 DOM Element 를 가리키므로
+						// 생성자를 통해 생성된 객체의 this 에 멤버를 추가하기 위해 위에서 참조하고 있는 _self 를 사용한다.
+						!_self.config.bodyScroll && _self._lockScroll();
+						_self._modalPosition();
+						_self.config.fade ? _self._modalFadeIn() : _self._modalShow();
+						_self.config.clickDimmed && _self._clickDimmed();
+						return false;
+					});
+
+					// modal close event 등록
+					this.$modalClose.on('click', function() {
+						!_self.config.bodyScroll && _self._unlockScroll();
+						_self.config.fade ? _self._modalFadeOut() : _self._modalHide();
+						_self.config.dimmed && _self.$dimLayer.remove();
+					});
+
+					// ESC 키 event 등록
+					if (this.config.escKey) {
+						this.detect.$doc.on('keydown', function(e) {
+							_self._isCheckedESC(e);
+						})
+					}
+
+				},
+				'_modalPosition': function() {
+					var modalWidth = this.$modalContent.outerWidth(),
+						modalHeight = this.$modalContent.outerHeight(),
+						windowHeight = this.detect.$win.height(),
+						modalHalfWidth = (modalWidth / 2),
+						modalHalfHeight = (modalHeight / 2);
+
+					//            if (modalHeight < windowHeight) {
+					//                this.$modalContent.css({
+					//                    marginLeft : -modalHalfWidth,
+					//                    marginTop : -modalHalfHeight
+					//                })
+					//            } else {
+					//                this.$modalContent.css({
+					//                    marginLeft : -modalHalfWidth,
+					//                    top : 50
+					//                })
+					//            }
+
+					// 옵션 값에 dimmed 가 true 라면 딤드를 설정
+					this.config.dimmed && this._setDimmed();
+
+				},
+				'_modalShow': function() {
+					this.$modalContent.show();
+					this._dimShow();
+					this._focusIn();
+				},
+				'_modalHide': function() {
+					this.$modalContent.hide();
+					this._dimHide();
+					this._focusOut();
+				},
+				'_modalFadeIn': function() {
+					this.$modalContent.fadeIn(this.config.fadeSpeed);
+					this._dimFadeIn();
+					this._focusIn();
+				},
+				'_modalFadeOut': function() {
+					this.$modalContent.fadeOut(this.config.fadeSpeed);
+					this._dimFadeOut();
+					this._focusOut();
+				},
+				'_focusIn': function() {
+					this.$modalContent
+						.attr('tabindex', 0)
+						.focus();
+				},
+				'_focusOut': function() {
+					this.$selector
+						.attr('tabindex', 0)
+						.focus();
+					this.$modalContent.attr('tabindex', -1)
+				},
+				'_setDimmed': function() {
+					this.detect.$body.append('<div class="dim-layer">');
+					this.$dimLayer = $('.dim-layer');
+					var dimLayerConfig = {
+						'display': 'none',
+						'position': 'fixed',
+						'left': 0,
+						'right': 0,
+						'top': 0,
+						'bottom': 0,
+						'background': '#000',
+						'z-index': 9999
+					};
+					this.$dimLayer
+						.css(dimLayerConfig)
+						.css({
+							opacity: this.config.dimOpacity
+						});
+				},
+				'_dimFadeIn': function() {
+					this.config.dimmed && this.$dimLayer.fadeIn();
+				},
+				'_dimFadeOut': function() {
+					this.config.dimmed && this.$dimLayer.fadeOut();
+				},
+				'_dimShow': function() {
+					this.config.dimmed && this.$dimLayer.show();
+				},
+				'_dimHide': function() {
+					this.config.dimmed && this.$dimLayer.hide();
+				},
+				'_lockScroll': function() {
+					this.detect.$body.addClass('layer-scroll');
+				},
+				'_unlockScroll': function() {
+					this.detect.$body.removeClass('layer-scroll');
+				},
+				'_isCheckedESC': function(e) {
+					if (e.which == 27) {
+						this.$modalContent.hide();
+						if (this.config.dimmed) {
+							this._setDimmed();
+							this.$dimLayer.remove();
+						}
+						this._focusOut();
+					}
+				},
+				'_clickDimmed': function() {
+					var _self = this;
+					if (this.config.clickDimmed && this.$dimLayer) {
+						this.$dimLayer.on('click', function(e) {
+							_self.$modalContent.hide();
+							$(this).remove();
+							_self._focusOut();
+							return false;
+						})
+					}
+				}
+			};
+
+			// $('.selector').dialog(); // 플러그인 호출 시 사용될 인자로 options(객체리터럴) 전달
+			$.fn[pluginName] = $.fn[pluginName] || function(options) {
+
+				// 여기서 this 는 플러그인 호출 시 $('.selector').dialog() 할 때 정의하는 선택자를 가리킨다.
+				// 예를 들어, $('.layer').dialog() 호출 시 넘긴 선택자인 $('.layer') 를 참조한다. 즉, 제이쿼리 객체를 참조
+				var $this = this;
+
+				// 선택자 대상이 여러 개일 경우를 감안하여 $.each() 반복문을 사용
+				return $.each($this, function(idx, el) {
+					// 플러그인 대상 선택자를 참조
+					var $element = $this.eq(idx);
+
+					// 여기서 this 는 DOM Element 을 참조한다.
+					// console.log(this);
+
+					// $.data()는 HTML 엘리먼트 내에 데이터를 저장하고 읽는 역할을 하는 함수
+					// 문법 : jQuery.data( element, key, value )
+					// key : string type의 변수로 data가 저장될 key 값입니다.
+
+					// 대상 선택자인 this(DOM Element)에 plugin_dialog key 정의되어 있지 않다면 value 값을 설정한다.
+					if (!$.data(this, 'plugin_' + pluginName)) {
+						// 조건이 true 라면
+						// 해당 DOM Element 에 키에 대한 값으로 즉, value 로 생성자 함수(new)를 호출하여 객체를 생성한 것을 담아 저장하도록 한다.
+						// 생성자의 인자로 타켓 선택자와 사용자 정의의 플러그인 옵션을 지정하도록 한다.
+						$.data(this, 'plugin_' + pluginName, new Dialog($element, options));
+						// 플러그인을 호출하게 되면 생성자 함수를 호출하게 되고 생성자 함수 내에서는 타켓 선택자, 옵션값을 전달받게 된다.
+					}
+
+					// jQuery 체이닝 메소드를 계속 실행하기 위해 제이쿼리 객체를 반환시킨다.
+					// 만약 반환값을 정의하지 않는다면 this 를 반환하게 된다.
+					// 이 스코프는 객체 내부이므로 반환값을 정의하지 않더라도 undefined 가 아닌 객체 자신을 반환한다.
+					// 그러므로 반환값을 정의하지 않는다면 자신의 this 객체를 반환하는데 여기서 this 는 DOM Element 객체를 참조하고 있다.
+					// 이대로 this 를 반환하게 되면 제이쿼리 체이닝 메소드를 더이상 사용하지 못하게 된다.
+					// 예를 들어, $('.layer-popup').dialog().addClass('active') 와 같이
+					// 사용자 정의 플러그인을 호출한 후 계속하여 제이쿼리에 속한 메소드를 사용하고자 할 경우 제이쿼리 객체를 반환해야 한다.
+					// DOM Element 를 반환하게 될 경우 더이상 제이쿼리 메소드를 체이닝(체이닝 메소드의 연결 고리가 끊김)하지 못하게 되므로 제이쿼리 객체를 반환하도록 한다.
+					return $element;
+
+				});
+			}
+
+		}(window, window.jQuery));
+
+		$(function() {
+			// 모달 팝업 보기 버튼에 data 설정하기 data-layer-btn="#layer01", 앵커 해쉬값과 동일하게 설정하는 것을 권장
+			$('.layer-popup').dialog({
+				modalClose: '.btnp-close', // 레이어 팝업 콘텐츠내의 닫기 버튼 클래스를 변경할 경우에 사용
+				fade: false, // 페이드 이펙트를 사용할 경우에 사용
+				fadeSpeed: 400, // 페이드 이펙트를 사용할 때 페이드 속도를 제어
+				dimmed: true, // 딤드 사용을 제어
+				dimOpacity: .8, // 딤드 효과를 사용할 경우에 opacity를 제어
+				escKey: false, // esc 키를 눌러서 레이어를 닫고자 할 경우에 사용
+				clickDimmed: false, // 딤드 영역을 클릭해서 레이어를 닫고자 할 경우에 사용
+				bodyScroll: false // 레이어 팝업 시 콘텐츠 스크롤 여부 제어
+			})
+		});
+
+		<!--팝업_End-->
+
+	</script>
+</head>
+<body>
+	<header id="top_wrap">
+		<div class="top_layout">
+			<h1 class="logo_wrap">Disaster Management IETM</h1>
+			<ul class="utill_wrap">
+				<li>
+					<a href="#">Login</a>
+				</li>
+				<li>
+					<a href="#">Registration</a>
+				</li>
+				<li>
+					<a href="#">Help</a>
+				</li>
+				<li>
+					<a href="#">연계정보</a>
+				</li>
+			</ul>
+		</div>
+		<nav id="gnb_layout">
+			<div class="gnb">
+				<ul class="depth01">
+					<li><a href="#">Main</a></li>
+					<li><a href="/kehazus/index">Index</a></li>
+					<li class="on"><a href="/kehazus/multiview">Multi VIEW</a></li>
+					<li><a href="#">CBT</a></li>
+					<li><a href="#">Bookmark</a></li>
+					<li><a href="#">Print</a></li>
+				</ul>
+			</div>
+		</nav>
+	</header>
+	<div class="body_wrap">
+		<div id="left_layout">
+			<div class="tab_group">
+				<div class="tab01">
+					<ul class="tab_title">
+						<li class="on">
+							<a href="javascript:void(0);">내용목차</a>
+						</li>
+						<li class="">
+							<a href="javascript:void(0);">검색</a>
+						</li>
+
+					</ul>
+					<div class="tab_content">
+						<div class="content_list conlist_wrap">
+							<div id="main">
+		
+								<ul id="codeDepth1" class="filetree treeview">
+								<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+									<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/1st.png&quot;)" class="">1st_Grade</span>
+										
+										<ul id="codeDepth1_1" style="display: none;">
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/창공.png&quot;)" class="">창의적공학설계</span>								
+												
+												<ul id="codeDepth2_1" style="display: none;">
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/BIM.png&quot;)" class="">BIM</span>
+														
+														<ul id="codeDepth3_1" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(1, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">BIM학습과정</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(1, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-추가학습.html&quot;)">BIM추가학습</span></li>
+														</ul>
+												</li>
+								
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/MC.png&quot;)" class="">MC보고서</span>
+																
+														<ul id="codeDepth3_1" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(1, &quot;resources/kehazus/list/1st_Grade/MC보고서/2018.11.12-인생실전-조_박영민_현승준_이경민_박지빈_-PJ.MC_Marshmallow-Challenge_-최종보고서.html&quot;)">Marshmello Challenge</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/다리.png&quot;)" class="">다리만들기</span>
+																
+														<ul id="codeDepth3_1" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(1, &quot;resources/kehazus/list/1st_Grade/다리만들기보고서/PJ._2-다리만들기_팀_.html&quot;)">다리만들기</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(1, &quot;resources/kehazus/img/창.png&quot;)" class="">창만들기</span>
+																
+														<ul id="codeDepth3_1" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(1, &quot;resources/kehazus/list/1st_Grade/창만들기/2018.12.11-PJ_4.자동개폐창-최종보고서-인생실전조_박영민_-박지빈_-이경민_-현승준_.html&quot;)">자동개폐창</span></li>
+														</ul>
+												</li>
+												</ul>						
+										</ul>
+										</li>
+										
+								<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+									<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/2nd.png&quot;)" class="">2nd_Grade</span>
+										
+										<ul id="codeDepth1_1" style="display: none;">
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/캡스톤.png&quot;)" class="">Capstone Design</span>								
+												
+												<ul id="codeDepth2_1" style="display: none;">
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/캡스톤.png&quot;)" class="">PJ.방화</span>
+														
+														<ul id="codeDepth3_1" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.방화#1</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.방화#2</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-추가학습.html&quot;)">PJ.방화#3</span></li>
+														</ul>
+												</li>																		
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/캡스톤.png&quot;)" class="">Micro Compact House</span>
+																
+														<ul id="codeDepth3_1" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.MCH#1</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.MCH#2</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.MCH#3</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/BIM/BIM-학습-과정.html&quot;)">PJ.MCH#4</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/1st_Grade/창만들기/2018.12.11-PJ_4.자동개폐창-최종보고서-인생실전조_박영민_-박지빈_-이경민_-현승준_.html&quot;)">PJ.MCH#5</span></li>
+														</ul>
+												</li>											
+												</ul>						
+										
+										</li>
+										
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)">건설ICT</span>
+								
+												<ul id="codeDepth2_5" style="display: none;">
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#1</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ1/start.html&quot;)">RaspberryPi_Beginning</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ1/CanDo.html&quot;)">'라즈베리'로할수있는것들</span></li>
+														</ul>
+												</li>	
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#2</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ2/RaspberryPi_LED.html&quot;)">RaspberryPi_LED</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#3</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ3/RaspberryPi-_2019_09_27_.html&quot;)">RaspberryPi_Sensor</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#4</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ4/SmartControl다루기.html&quot;)">SmartControl다루기</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#5</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ5/2019-건설ICT-WebPage만들기.html&quot;)">WebPage만들기</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/건설ICT.png&quot;)" class="">PJ#6</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건설ICT/PJ6/건설ICT_HTML.html&quot;)">MyICT</span></li>
+														</ul>
+												</li>
+												</ul>
+										</li>
+										
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/구조.png&quot;)">건축구조학</span>
+												
+												<ul id="codeDepth2_1" style="display: none;">
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/구조.png&quot;)" class="">과제방</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/20190304-종이집-보고서.html&quot;)">종이집 보고서</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/20190311-건축구조학-과제_오페라_.html&quot;)">오페라하우스 보고서</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/20190327-지반개량과-연약지반의-대책.html&quot;)">지반개량과 연약지반의 대책 보고서</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/인간이-만들어낸-기본적인-구조개요.html&quot;)">인간 만들어낸 기본적인 구조</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/집짓기-공정_강구조_.html&quot;)">집짓기 공정(강구조)</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/집짓기-공정_일반_.html&quot;)">집짓기 공정(일반)</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/집짓기-공정_철근콘크리트_.html&quot;)">집짓기 공정(RC)</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/집짓기-공정_조적조_.html&quot;)">집짓기 공정(조적조)</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/과제방/화성성역의궤.html&quot;)">화성성역의궤 보고서</span></li>
+														</ul>
+												</li>
+												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/구조.png&quot;)" class="">참고자료</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">RC구조 개요</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">블록구조 특성</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">막구조공사 특기 시방서</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">'성원상데빌'아파트 공사 개요</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">조적공사 총론</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/&quot;)">철골 공사와 계획</span></li>
+															<li><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/철골 (공장 제작)- MM(ph기법).PNG&quot;)">철골(공장 제작)-마인드맵</span></li>
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/건축구조학/참고자료/철골 (현장 설치)- MM(ph기법).PNG&quot;)">철골(현장 설치)-마인드맵</span></li>															
+														</ul>
+												</li>
+												</ul>
+										</li>
+										
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)">건축환경공학</span>
+								
+												<ul id="codeDepth2_5" style="display: none;">
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Air Flow Window System</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Air_Flow_Window_System/Air-Flow-Window-System.html&quot;)">Air Flow Window System</span></li>
+														</ul>
+												
+												</li>								
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Breathing Wall</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Breathing_Wall/Breathing-Wall-ppt.x.html&quot;)">Breathing Wall</span></li>
+														</ul>
+												
+												</li>											
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Cool Tube System</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Cool_Tube_System/Cool-Tube-System-ppt.x.html&quot;)">Cool Tube System</span></li>
+														</ul>
+												
+												</li>												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Double Skin</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Double_Skin/Double-Skin-ppt.x.html&quot;)">Double Skin</span></li>
+														</ul>
+												
+												</li>												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Solar Chimney</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Solar_Chimney/Solar-Chimney.html&quot;)">Solar Chimney</span></li>
+														</ul>
+												
+												</li>												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Task Ambient(Air Conditioning)</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Task&Ambient/Task-_-Ambient-_-Air-Conditioning_-Lighting-_-System-ppt.x.html&quot;)">Task Ambient</span></li>
+														</ul>
+												
+												</li>												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">Total Enthalphy Heat Exchanger</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/Total Enthalpht Heat Exchanger/Totla-Enthalphy-Heat-Exchanger-ppt.x.html&quot;)">Total Enthalphy Heat Exchanger</span></li>
+														</ul>
+												
+												</li>												
+												<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+													<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(2, &quot;resources/kehazus/img/환경.png&quot;)" class="">빛 공해</span>								
+								
+														<ul id="codeDepth2_5" style="display: none;">
+															<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(2, &quot;resources/kehazus/list/2nd_Grade/환경공학사/빛 공해/빛-공해.html&quot;)">빛 공해</span></li>
+														</ul>
+												
+												</li>												
+												</ul>
+										</li>
+										</ul>								
+								<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+									<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(3, &quot;resources/kehazus/img/3rd.png&quot;)" class="">3rd_Grade</span>
+										
+										<ul id="codeDepth1_2" style="display: none;">
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(3, &quot;resources/kehazus/html/sample2d2t.html&quot;)">KBS_ICT</span>
+								
+												<ul id="codeDepth2_5" style="display: none;">
+													<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(3, &quot;&quot;)">NO DATA(BA001)</span></li>
+												</ul>
+										
+										</li>
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+											<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(3, &quot;resources/kehazus/html/1/Raspberry.html&quot;)">1. RaspberryPi</span>
+											
+												<ul id="codeDepth2_6" style="display: none;">
+												<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><span onclick="show_content(3, &quot;&quot;)">NO DATA(BB001)</span>
+												</li>
+												</ul>
+										</li>
+										</ul>
+								</li>
+								
+								<li class="expandable"><div class="hitarea expandable-hitarea"></div><img src="resources/kehazus/img/menutree/folder.gif">
+								<span onclick="show_content(4, &quot;resources/kehazus/img/4th.png&quot;)" class="">4th_Grade</span>
+								<ul id="codeDepth1_3" style="display: none;">
+								<li class="expandable"><div class="hitarea expandable-hitarea"></div><img src="resources/kehazus/img/menutree/folder.gif">
+								<span onclick="show_content(3, &quot;resources/kehazus/html/sample2d3t.html&quot;)">A. 수력 발전시설(CA000)</span><ul id="codeDepth2_12" style="display: none;"><li><img src="resources/kehazus/img/menutree/file.gif">
+								<span onclick="show_content(3, &quot;resources/kehazus/html/sample3d3t.html&quot;)">1. 점검항목(CA001)</span></li><li class="last"><img src="resources/kehazus/img/menutree/file.gif">
+								<span onclick="show_content(3, &quot;resources/kehazus/html/sample3d3t.html&quot;)">2. 손상유형(CA002)</span></li></ul></li></ul></li>
+								
+								<li class="expandable lastExpandable"><div class="hitarea expandable-hitarea lastExpandable-hitarea"></div>
+								<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(&quot;resources/kehazus/html/sample1d4t.html&quot;)" class="">대외활동</span>								
+								<ul id="codeDepth1_4" style="display: none;">
+										
+										<li class="expandable"><div class="hitarea expandable-hitarea"></div>
+										<img src="resources/kehazus/img/menutree/folder.gif"><span onclick="show_content(&quot;&quot;)">대한BIM학회</span>
+											
+											<ul id="codeDepth2_16" style="display: none;">
+											<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><a href="#layer01" data-popup="#layer01" class="layer-popup" title="판넬">작품 판넬</a></li>
+											</ul>
+										
+										<div class="pop-wrap" id="layer01" style="display:none">
+										<dl>
+											<dt class="pop-header">
+												<h1>대회 판넬</h1>
+												<a href="#none" class="btnp-close"></a>
+											</dt>
+												<dd class="pop-box">
+												<div class="pop-cont">
+													<div class="pop-msg">
+														<img src="resources/kehazus/list/International_Activity/대한BIM학회/슬라이드1.jpg" alt="확대하기" usemap="#Map">
+														<map name="Map" id="Map">
+															<area shape="rect" coords="0,0,600,1000" href="resources/kehazus/list/International_Activity/대한BIM학회/최종본.html" target="blank">
+														</map>
+													</div>
+												</div>
+												</dd>
+										</dl>
+										</div>
+												
+											<ul id="codeDepth2_16" style="display: none;">
+											<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><a href="#layer03" data-popup="#layer03" class="layer-popup" title="PPT동영상">PPT동영상</a></li>
+											</ul>
+											
+										<div class="pop-wrap" id="layer03" style="display:none">
+										<dl>
+											<dt class="pop-header">
+												<h1>PPT 동영상</h1>
+												<a href="#none" class="btnp-close"></a>
+											</dt>
+												<dd class="pop-box">
+												<div class="pop-cont">
+													<div class="pop-msg">
+														<video src="resources/kehazus/list/International_Activity/대한BIM학회/BIM Awards 2019 제출 동영상.mp4" width="600" height="400" controls>
+													</div>
+												</div>
+												</dd>
+										</dl>
+										</div>
+										
+											<ul id="codeDepth2_16" style="display: none;">
+											<li class="last"><img src="resources/kehazus/img/menutree/file.gif"><a href="#layer04" data-popup="#layer04" class="layer-popup" title="PPT동영상">건물동영상</a></li>
+											</ul>
+											
+										<div class="pop-wrap" id="layer04" style="display:none">
+										<dl>
+											<dt class="pop-header">
+												<h1>건물 동영상</h1>
+												<a href="#none" class="btnp-close"></a>
+											</dt>
+												<dd class="pop-box">
+												<div class="pop-cont">
+													<div class="pop-msg">
+														<video src="resources/kehazus/list/International_Activity/대한BIM학회/BIM Awards 2019 건물 동영상.mp4" width="600" height="400" controls>
+													</div>
+												</div>
+												</dd>
+										</dl>
+										</div>
+										
+										</li>
+										
+										</ul></li></ul></li></li>
+								</div>
+						</div>
+						<div class="content_list search_wrap on">
+							<form action="" method="" class="left_searchForm">
+								<fielset>
+									<legend>분류체계검색</legend>
+									<p>
+										<label for="type01">1. 재해유형</label>
+										<select id="type01" name="" onchange="javascript:show_list(1);">
+											<optgroup label="">
+											<option value="">=====선택=====</option>
+											</optgroup>
+										<option value="AA000">A. 태풍</option><option value="AB000">B. 지진</option><option value="AC000">C. 호우</option><option value="AD000">D. 폭풍</option></select>
+									</p>
+									<p>
+										<label for="type02">2. 시설유형</label>
+										<select id="type02" name="" onchange="javascript:show_list(2);">
+											<optgroup label="">
+											<option value="">=====선택=====</option>
+											</optgroup>
+										<option value="BA000">A. 계획구역 및 토지정비</option><option value="BB000">B. 공공 건축 시설</option><option value="BC000">C. 운송 교통 시설</option><option value="BD000">D. 보건.휴식.종료시설</option><option value="BE000">E. 수자원.환경시설</option><option value="BF000">F. 주거 및 상업시설</option><option value="BG000">G. 에너지 발전시설</option></select>
+									</p>
+									<p>
+										<label for="type03">3. 재해업무정보유형</label>
+										<select id="type03" name="" onchange="javascript:show_list(3);">
+											<optgroup label="">
+											<option value="">=====선택=====</option>
+											</optgroup>
+										<option value="DA000">A. 예방업무</option><option value="DB000">B. 응급업무</option><option value="DC000">C. 복구업무</option></select>
+									</p>
+									<p>
+										<label for="search"></label>
+										<input type="search" name="search" id="search_keyword" value="">
+										<input type="submit" value="검색" onclick="javascript:show_list();return false;">
+									</p>
+								</fielset>
+							</form>
+							<div class="search_Resultat_wrap">
+								<h3 class="">검색결과</h3>
+								
+							</div>
+							
+						
+				
+							
+						
+						</div>
+					</div>
+					<!--tab_content-->
+				</div>
+				<!--tab01-->
+			</div>
+			<!--.tab_group-->
+		</div>
+		<!--#left_layout-->
+		<div id="contens">
+			<div class="tab_group">
+				<div class="tab02">
+					<ul class="btn_group">
+						<li><a href="#" title="슬라이드" class="btn_slide"></a></li>
+						<li><a href="#" title="확대/축소" class="btn_viewSize"></a></li>
+						<li><a href="#" title="프린터" class="btn_print"></a></li>
+					</ul>
+					<ul class="tab_title">
+						<li class="on">
+							<a href="javascript:void(0);">전체보기</a>
+						</li>
+						<li>
+							<a href="javascript:void(0);">Tab01</a>
+						</li>
+						<li>
+							<a href="javascript:void(0);">Tab02</a>
+						</li>
+						<li>
+							<a href="javascript:void(0);">Tab03</a>
+						</li>
+						<li>
+							<a href="javascript:void(0);">Tab04</a>
+						</li>
+					</ul>
+					<div class="tab_content">
+						<div class="content_list view_all on">
+							<div id="tab01_all" class="view_all_con"><object data="resources/kehazus/html/sample1d1t.html"></object></div>
+							<div id="tab02_all" class="view_all_con"></div>
+							<div id="tab03_all" class="view_all_con"></div>
+							<div id="tab04_all" class="view_all_con"></div>
+						</div>
+						<div id="tab01_only" class="content_list view_part"><object data="resources/kehazus/html/sample1d1t.html"></object></div>
+						<div id="tab02_only" class="content_list view_part">
+							<div class="view_tab_content">
+							</div>
+						</div>
+						<div id="tab03_only" class="content_list view_part">
+							<div class="view_tab_content">
+							</div>
+						</div>
+						<div id="tab04_only" class="content_list view_part">
+							<div class="view_tab_content">
+							</div>
+						</div>
+						<div class="link_group">
+							<h3>재해업무선택</h3>
+							<ul>
+								<li><a href="#layer01" data-popup="#layer05" class="layer-popup" title="예방">예 방</a></li>
+								<li><a href="#layer02" data-popup="#layer02" class="layer-popup" title="응급">응 급</a></li>
+								<li><a href="#layer03" data-popup="#layer06" class="layer-popup" title="복구">복 구</a></li>
+								<li><a href="#layer04" data-popup="#layer07" class="layer-popup" title="보고">보 고</a></li>
+							</ul>
+						</div>
+
+						<div class="pop-wrap" id="layer01" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>예 방</h1>
+							<a href="#none" class="btnp-close"></a>
+							</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/pop01.png" alt="평가판정" usemap="#Map" border="0">
+											<map name="Map" id="Map">
+											    <area shape="poly" coords="181,368,258,343,334,368,259,393" href="#layer01_01" data-popup="#layer01_01" class="layer-popup">
+											</map>
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+						<div class="pop-wrap" id="layer01_01" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>평가 · 판정</h1>
+							<a href="#none" class="btnp-close"></a>
+						</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/01_01.jpg" alt="" usemap="#Map02" border="0">
+											<map name="Map02" id="Map02">
+											    <area shape="rect" coords="23,60,145,80" href="#layer01_01_01" class="layer01_01_01">
+											    <area shape="rect" coords="417,59,540,81" href="#layer01_01_02" class="layer01_01_02">
+											</map>
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+						<script>
+							$(function() {
+								$(".layer01_01_01").click(function() {
+									$('#layer01_01_01').css('display', 'block');
+								});
+								$(".layer01_01_02").click(function() {
+									$('#layer01_01_02').css('display', 'block');
+								});
+							});
+
+						</script>
+
+						<div class="pop-wrap" id="layer01_01_01" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>지진 재해도 평가</h1>
+							<a href="#none" onclick="document.getElementById('layer01_01_01').style.display='none'" class="btnp-close"></a>
+						</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/01_01_01.jpg" alt="">
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+						<div class="pop-wrap" id="layer01_01_02" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>지진 취약도 평가</h1>
+							<a href="#none" onclick="document.getElementById('layer01_01_02').style.display='none'" class="btnp-close"></a>
+						</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/01_01_02.jpg" alt="">
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+						<div class="pop-wrap" id="layer02" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>응 급</h1>
+							<a href="#none" class="btnp-close"></a>
+							</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/pop02.png" alt="">
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+						<div class="pop-wrap" id="layer06" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>복 구</h1>
+							<a href="#none" class="btnp-close"></a>
+						</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/pop03.png" alt="">
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+						<div class="pop-wrap" id="layer07" style="display:none">
+							<dl>
+								<dt class="pop-header">
+							<h1>보 고</h1>
+							<a href="#none" class="btnp-close"></a>
+						</dt>
+								<dd class="pop-box">
+									<div class="pop-cont">
+										<div class="pop-msg">
+											<img src="resources/kehazus/img/pop04.png" alt="">
+										</div>
+									</div>
+								</dd>
+							</dl>
+						</div>
+
+					</div>
+				</div>
+				<!--tab02-->
+			</div>
+			<!--.tab_group-->
+		</div>
+		<!--#contens-->
+	</div>
+	<!--.body_wrap-->
+
+
+
+</body>
+</html>
